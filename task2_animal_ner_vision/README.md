@@ -7,13 +7,9 @@ This folder contains the solution scaffold for **Task 2**: a two-stage ML pipeli
 ## High-level design
 
 - **Dataset (image classification)**:
-  - Uses an animals dataset with **≥10 animal classes** arranged as an `ImageFolder`-style directory (similar to *Animals-10*):
-    - dog, cat, horse, elephant, cow, sheep, butterfly, chicken, spider, squirrel
-  - Expected structure:
-    ```
-    data/animals/train/<class_name>/*.jpg
-    data/animals/val/<class_name>/*.jpg
-    ```
+  - [Animal Image Dataset – 90 Different Animals](https://www.kaggle.com/datasets/iamsouravbanerjee/animal-image-dataset-90-different-animals) by Sourav Banerjee (Kaggle).
+  - 5,400 images across **90 animal classes**, ~60 images per class.
+  - See the [Dataset](#dataset) section below for full details.
 
 - **NER model**:
   - Transformer-based token classification model (e.g. `distilbert-base-cased`) fine-tuned to detect animal mentions with labels `B-ANIMAL`, `I-ANIMAL`, `O`.
@@ -39,6 +35,73 @@ This folder contains the solution scaffold for **Task 2**: a two-stage ML pipeli
 | `pipeline.py` | Wires NER + image classifier and returns a boolean |
 | `requirements.txt` | Dependencies for this task |
 | `eda_task2.ipynb` | Jupyter notebook for dataset EDA |
+
+---
+
+## Dataset
+
+### Animal Image Dataset – 90 Different Animals
+
+| Property | Value |
+|---|---|
+| **Source** | [Kaggle](https://www.kaggle.com/datasets/iamsouravbanerjee/animal-image-dataset-90-different-animals) |
+| **Author** | Sourav Banerjee (`iamsouravbanerjee`) |
+| **Total images** | 5,400 |
+| **Classes** | 90 |
+| **Images per class** | ~60 |
+| **License** | See Kaggle dataset page |
+
+#### Animal classes (90)
+
+antelope, badger, bat, bear, bee, beetle, bison, boar, butterfly, cat, caterpillar, chimpanzee, cockroach, cow, coyote, crab, crow, deer, dog, dolphin, donkey, dragonfly, duck, eagle, elephant, flamingo, fly, fox, goat, goldfish, goose, gorilla, grasshopper, hamster, hare, hedgehog, hippopotamus, hornbill, horse, hummingbird, hyena, jellyfish, kangaroo, koala, ladybug, leopard, lion, lizard, lobster, mosquito, moth, mouse, octopus, okapi, orangutan, otter, owl, ox, oyster, panda, parrot, pelecan, penguin, pig, pigeon, porcupine, possum, raccoon, rat, reindeer, rhinoceros, rooster, salamander, seal, shark, sheep, snake, sparrow, squid, squirrel, starfish, swan, tiger, turkey, turtle, whale, wolf, wombat, woodpecker, zebra
+
+> **Note:** The model published on Hugging Face (`hesoyam3333/test_task_winstars`) was trained on a **subset** of these 90 classes. Refer to the `class_to_idx` entry inside the checkpoint for the exact set used.
+
+#### Downloading the dataset
+
+```bash
+# Option 1: Kaggle CLI
+pip install kaggle
+kaggle datasets download -d iamsouravbanerjee/animal-image-dataset-90-different-animals
+unzip animal-image-dataset-90-different-animals.zip -d data/animals_raw
+
+# Option 2: Manual download
+# Visit https://www.kaggle.com/datasets/iamsouravbanerjee/animal-image-dataset-90-different-animals
+# and click the Download button (requires a free Kaggle account).
+```
+
+#### Preparing the directory layout
+
+The dataset ships as a flat `Animals/` folder with one sub-folder per class. Split it into `train/` and `val/` before training:
+
+```python
+import os, shutil, random
+
+SRC   = "data/animals_raw/Animals/Animals"
+DEST  = "data/animals"
+SPLIT = 0.8
+random.seed(42)
+
+for cls in os.listdir(SRC):
+    images = os.listdir(os.path.join(SRC, cls))
+    random.shuffle(images)
+    cut = int(len(images) * SPLIT)
+    for split, imgs in [("train", images[:cut]), ("val", images[cut:])]:
+        out = os.path.join(DEST, split, cls)
+        os.makedirs(out, exist_ok=True)
+        for img in imgs:
+            shutil.copy(os.path.join(SRC, cls, img), os.path.join(out, img))
+```
+
+After running this script the layout matches what `image_train.py` expects:
+
+```
+data/animals/
+  train/
+    antelope/  badger/  bat/  ...
+  val/
+    antelope/  badger/  bat/  ...
+```
 
 ---
 
