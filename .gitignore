@@ -1,0 +1,38 @@
+# venv
+.venv/
+env/
+venv/
+
+# python
+__pycache__/
+*.pyc
+
+# ML stuff
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# datasets
+data/
+datasets/
+
+# logs
+logs/
+*.log
+
+# system
+.DS_Store
+.venv/
+
+# data
+data/
+datasets/
+task2_animal_ner_vision/data/
+
+# big models
+task2_animal_ner_vision/trained_models_ner/
+
+# optional
+*.pt
+*.pth
