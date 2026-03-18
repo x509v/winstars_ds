@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 import argparse
 from typing import List
-
 import torch
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 
@@ -21,8 +19,8 @@ def load_model(model_source: str):
 
 def extract_animal_entities(text: str, model_source: str, min_confidence: float = 0.5) -> List[str]:
     tokenizer, model = load_model(model_source)
-
     encoding = tokenizer(text, return_tensors="pt")
+
     with torch.no_grad():
         outputs = model(**encoding)
 
@@ -36,6 +34,7 @@ def extract_animal_entities(text: str, model_source: str, min_confidence: float 
 
     animal_tokens: List[str] = []
     current: List[str] = []
+
     for token, label, conf in zip(tokens, labels, confs):
         if token.startswith("##"):
             token = token[2:]
@@ -48,6 +47,7 @@ def extract_animal_entities(text: str, model_source: str, min_confidence: float 
             if current:
                 animal_tokens.append(" ".join(current))
                 current = []
+
     if current:
         animal_tokens.append(" ".join(current))
 
