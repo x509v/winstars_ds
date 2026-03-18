@@ -7,10 +7,20 @@ import torch
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 
-def extract_animal_entities(text: str, model_dir: str, min_confidence: float = 0.5) -> List[str]:
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForTokenClassification.from_pretrained(model_dir)
+def load_model(model_source: str):
+    """
+    model_source can be:
+    - local path: ./trained_models_ner
+    - HF repo: username/model-name
+    """
+    tokenizer = AutoTokenizer.from_pretrained(model_source)
+    model = AutoModelForTokenClassification.from_pretrained(model_source)
     model.eval()
+    return tokenizer, model
+
+
+def extract_animal_entities(text: str, model_source: str, min_confidence: float = 0.5) -> List[str]:
+    tokenizer, model = load_model(model_source)
 
     encoding = tokenizer(text, return_tensors="pt")
     with torch.no_grad():
@@ -30,7 +40,6 @@ def extract_animal_entities(text: str, model_dir: str, min_confidence: float = 0
         if token.startswith("##"):
             token = token[2:]
         if "ANIMAL" in label and conf >= min_confidence:
-            # B- means a NEW entity starts — close the previous span first
             if label.startswith("B-") and current:
                 animal_tokens.append(" ".join(current))
                 current = []
@@ -48,22 +57,25 @@ def extract_animal_entities(text: str, model_dir: str, min_confidence: float = 0
         if ent:
             clean.append(ent)
 
-    # Deduplicate while preserving order, case-insensitive
     clean = list(dict.fromkeys(c.lower() for c in clean))
     return clean
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run NER inference to extract animal names from text.")
-    parser.add_argument("--model-dir", type=str, required=True, help="Path to fine-tuned NER model directory.")
-    parser.add_argument("--text", type=str, required=True, help="Input sentence.")
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Local path OR Hugging Face repo (e.g. username/model-name)",
+        default="hesoyam3333/test_task_winstars"
+    )
+    parser.add_argument("--text", type=str, required=True)
     parser.add_argument("--min-confidence", type=float, default=0.5)
     args = parser.parse_args()
 
-    animals = extract_animal_entities(args.text, args.model_dir, min_confidence=args.min_confidence)
+    animals = extract_animal_entities(args.text, args.model, min_confidence=args.min_confidence)
     print(animals)
 
 
 if __name__ == "__main__":
     main()
-

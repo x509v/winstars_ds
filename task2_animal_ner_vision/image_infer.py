@@ -2,16 +2,36 @@ from __future__ import annotations
 
 import argparse
 from typing import Tuple, Dict, Any
+import os
 
 import torch
 from PIL import Image
 from torchvision import models, transforms
+from huggingface_hub import hf_hub_download
+
+
+DEFAULT_REPO = "hesoyam3333/test_task_winstars"
+DEFAULT_MODEL_PATH_IN_REPO = "image_model/model.pt"
+
+
+def resolve_checkpoint_path(checkpoint: str | None) -> str:
+    """
+    Resolve checkpoint path:
+    - if local path exists -> use it
+    - otherwise -> download from Hugging Face
+    """
+    if checkpoint and os.path.exists(checkpoint):
+        return checkpoint
+
+    print("⬇️ Downloading model from Hugging Face...")
+    path = hf_hub_download(
+        repo_id=DEFAULT_REPO,
+        filename=DEFAULT_MODEL_PATH_IN_REPO,
+    )
+    return path
 
 
 def load_model(checkpoint_path: str) -> Tuple[torch.nn.Module, Dict[str, int]]:
-    """
-    Load a trained ResNet18 classifier and class_to_idx mapping.
-    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpoint: Dict[str, Any] = torch.load(checkpoint_path, map_location=device)
 
@@ -36,7 +56,9 @@ def preprocess_image(image_path: str) -> torch.Tensor:
     return transform(image).unsqueeze(0)
 
 
-def predict_image_class(checkpoint_path: str, image_path: str) -> str:
+def predict_image_class(checkpoint: str | None, image_path: str) -> str:
+    checkpoint_path = resolve_checkpoint_path(checkpoint)
+
     model, class_to_idx = load_model(checkpoint_path)
     device = next(model.parameters()).device
 
@@ -51,8 +73,13 @@ def predict_image_class(checkpoint_path: str, image_path: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run image classification inference.")
-    parser.add_argument("--checkpoint", type=str, required=True, help="Path to trained model checkpoint (.pt).")
-    parser.add_argument("--image", type=str, required=True, help="Path to input image.")
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Local path to model (.pt). If not provided, downloads from Hugging Face.",
+    )
+    parser.add_argument("--image", type=str, required=True)
     args = parser.parse_args()
 
     label = predict_image_class(args.checkpoint, args.image)
@@ -61,4 +88,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
